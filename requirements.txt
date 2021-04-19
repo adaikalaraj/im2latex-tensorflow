@@ -1,0 +1,20 @@
+!pip2 install tensorflow-gpu==1.15
+!pip2 install -r https://raw.githubusercontent.com/Lasagne/Lasagne/v0.1/requirements.txt
+!pip2 install Lasagne==0.1
+
+!wget https://zenodo.org/record/56198/files/im2latex_formulas.lst
+!wget https://zenodo.org/record/56198/files/im2latex_test.lst
+!wget https://zenodo.org/record/56198/files/im2latex_train.lst
+!wget https://zenodo.org/record/56198/files/im2latex_validate.lst
+
+!python2 scripts/preprocessing/preprocess_images.py --input-dir ../formula_images --output-dir ../images_processed
+
+!python2 scripts/preprocessing/preprocess_formulas.py --mode normalize --input-file ../im2latex_formulas.lst --output-file formulas.norm.lst
+
+!python2 scripts/preprocessing/preprocess_filter.py --filter --image-dir ../images_processed --label-path formulas.norm.lst --data-path ../im2latex_train.lst --output-path train.lst
+
+!python2 scripts/preprocessing/preprocess_filter.py --filter --image-dir ../images_processed --label-path formulas.norm.lst --data-path ../im2latex_validate.lst --output-path valid.lst
+
+!python2 scripts/preprocessing/preprocess_filter.py --no-filter --image-dir ../images_processed --label-path formulas.norm.lst --data-path ../im2latex_test.lst --output-path test.lst
+
+!python2 scripts/preprocessing/generate_latex_vocab.py --data-path train.lst --label-path formulas.norm.lst --output-file latex_vocab.txt

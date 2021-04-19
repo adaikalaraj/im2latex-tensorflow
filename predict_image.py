@@ -9,6 +9,8 @@ import data_loaders
 import time
 import os
 
+tf.compat.v1.disable_eager_execution()
+
 BATCH_SIZE      = 20
 EMB_DIM         = 80
 ENC_DIM         = 256
@@ -58,21 +60,29 @@ def predict(set='test',batch_size=1,visualize=True):
         assert (batch_size==1), "Batch size should be 1 for visualize mode"
     import random
     # f = np.load('train_list_buckets.npy').tolist()
-    f = np.load(set+'_buckets.npy').tolist()
+    f = np.load(set+'_buckets.npy', allow_pickle=True).tolist()
     random_key = random.choice(f.keys())
-    #random_key = (160,40)
+    print(random_key)
     f = f[random_key]
+    print(f)
     imgs = []
     print "Image shape: ",random_key
     while len(imgs)!=batch_size:
         start = np.random.randint(0,len(f),1)[0]
+        print(f[start][0])
+        # imgs.append(np.asarray(Image.open('/content/im2latex-tensorflow/images_processed/100bac2b03.png').convert('YCbCr'))[:,:,0][:,:,None])
+        # imgs.append(np.asarray(Image.open('/content/im2latex-tensorflow/images_processed/10413ebe59.png').convert('YCbCr'))[:,:,0][:,:,None])
+        # imgs.append(np.asarray(Image.open('/content/im2latex-tensorflow/images_processed/10442b0b73.png').convert('YCbCr'))[:,:,0][:,:,None])
         if os.path.exists('./images_processed/'+f[start][0]):
             imgs.append(np.asarray(Image.open('./images_processed/'+f[start][0]).convert('YCbCr'))[:,:,0][:,:,None])
+
+        # if os.path.exists('/content/im2latex-tensorflow/images_processed/10442b0b73.png'):
+        #     imgs.append(np.asarray(Image.open('/content/im2latex-tensorflow/images_processed/10442b0b73.png').convert('YCbCr'))[:,:,0][:,:,None])
 
     imgs = np.asarray(imgs,dtype=np.float32).transpose(0,3,1,2)
     inp_seqs = np.zeros((batch_size,160)).astype('int32')
     print imgs.shape
-    inp_seqs[:,0] = np.load('properties.npy').tolist()['char_to_idx']['#START']
+    inp_seqs[:,0] = np.load('properties.npy', allow_pickle=True).tolist()['char_to_idx']['#START']
     tflib.ops.ctx_vector = []
 
     l_size = random_key[0]*2
@@ -80,7 +90,7 @@ def predict(set='test',batch_size=1,visualize=True):
     inp_image = Image.fromarray(imgs[0][0]).resize((l_size,r_size))
     l = int(np.ceil(random_key[1]/8.))
     r = int(np.ceil(random_key[0]/8.))
-    properties = np.load('properties.npy').tolist()
+    properties = np.load('properties.npy', allow_pickle=True).tolist()
     idx_to_chars = lambda Y: ' '.join(map(lambda x: properties['idx_to_char'][x],Y))
 
     for i in xrange(1,160):
@@ -132,6 +142,7 @@ init = tf.global_variables_initializer()
 # init = tf.initialize_all_variables()
 sess.run(init)
 saver = tf.train.Saver()
+saver.restore(sess, tf.train.latest_checkpoint('./'))
 # saver.restore(sess,'./weights_best.ckpt')
 ## start the tensorflow QueueRunner's
 # tf.train.start_queue_runners(sess=sess)
@@ -146,35 +157,5 @@ print "Compiled Train function!"
 i=0
 lr = 0.1
 best_perp = np.finfo(np.float32).max
-for i in xrange(i,NB_EPOCHS):
-    iter=0
-    costs=[]
-    times=[]
-    itr = data_loaders.data_iterator('train', BATCH_SIZE)
-    for train_img,train_seq,train_mask in itr:
-        iter += 1
-        start = time.time()
-        _ , _loss = sess.run([train_step,loss],feed_dict={X:train_img,seqs:train_seq,mask:train_mask,learn_rate:lr})
-        # _ , _loss = sess.run([train_step,loss],feed_dict={X:train_img,seqs:train_seq,mask:train_mask})
 
-        times.append(time.time()-start)
-        costs.append(_loss)
-        if iter%100==0:
-            print "Iter: %d (Epoch %d)"%(iter,i+1)
-            print "\tMean cost: ",np.mean(costs)
-            print "\tMean time: ",np.mean(times)
-
-    print "\n\nEpoch %d Completed!"%(i+1)
-    print "\tMean train cost: ",np.mean(costs)
-    print "\tMean train perplexity: ",np.mean(map(lambda x: np.power(np.e,x), costs))
-    print "\tMean time: ",np.mean(times)
-    val_loss, val_perp = score('valid',BATCH_SIZE)
-    if val_perp < best_perp:
-        best_perp = val_perp
-        saver.save(sess,"weights_best.ckpt")
-        print "\tBest Perplexity Till Now! Saving state!"
-    else:
-        lr = lr * 0.5
-    print "\n\n"
-
-#sess.run([train_step,loss],feed_dict={X:np.random.randn(32,1,256,512),seqs:np.random.randint(0,107,(32,40)),mask:np.random.randint(0,2,(32,40))})
+predict(set='test',batch_size=1, visualize=False)

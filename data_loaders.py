@@ -13,7 +13,7 @@ def data_iterator(set='train',batch_size = 32):
         set - 'train','valid','test' sets
         batch_size - integer (Usually 32,64,128, etc.)
     '''
-    train_dict = np.load(set+'_buckets.npy').tolist()
+    train_dict = np.load(set+'_buckets.npy', allow_pickle=True).tolist()
     print "Length of %s data: "%set,np.sum([len(train_dict[x]) for x in train_dict.keys()])
 
     for keys in train_dict.keys():
